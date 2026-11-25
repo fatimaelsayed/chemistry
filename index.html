@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>chemistry</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+        /* THEME COLOURS (light and dark) */
+        :root{--ink:#1d2633;
+            --paper:#f6f7f9;
+            --chalk:#f4f7fb;
+            --board:#24488a;
+            --accent:#f2c14e;
+            --good:#2e8b57;
+            --bad:#c0463a;
+            --panel:rgba(246,247,249,.96);
+            --line:#c4cbd4;
+            box-sizing:border-box;
+            padding-top:env(safe-area-inset-top,0px);
+            padding-bottom:env(safe-area-inset-bottom,0px)
+        }
+
+        @media (prefers-color-scheme:dark){
+            :root:not([data-theme="light"]){--ink:#eef1f6;
+                --paper:#1d242e;
+                --panel:rgba(29,36,46,.96);
+                --line:#3e4a5c
+            }
+        }
+
+        :root[data-theme="dark"]{--ink:#eef1f6;
+            --paper:#1d242e;
+            --panel:rgba(29,36,46,.96);
+            --line:#3e4a5c
+        }
+
+        /* BASE LAYOUT */
+        html,body{height:100%;
+            margin:0;
+            overflow:hidden;
+            background:#1d242e;
+            font-family:"Patrick Hand","Comic Sans MS",system-ui,sans-serif;
+            color:var(--ink)
+        }
+
+        canvas{touch-action:none;
+            display:block;
+            position:absolute;
+            inset:0;
+            width:100%;
+            height:100%
+        }
+
+        /* TOP BAR AND SPEECH BUBBLE */
+        #hud{position:absolute;
+            top:calc(10px + env(safe-area-inset-top,0px));
+            left:10px;
+            right:10px;
+            display:flex;
+            justify-content:space-between;
+            gap:8px;
+            pointer-events:none
+        }
+
+        .pill{background:var(--panel);
+            border:2px solid var(--line);
+            border-radius:999px;
+            padding:6px 16px;
+            font-size:20px
+        }
+
+        #bubble{position:absolute;
+            top:calc(58px + env(safe-area-inset-top,0px));
+            left:50%;
+            transform:translateX(-50%);
+            max-width:min(560px,92vw);
+            background:var(--panel);
+            border:2px solid var(--line);
+            border-radius:14px;
+            padding:8px 16px;
+            font-size:19px;
+            text-align:center;
+            transition:opacity .2s
+        }
+
+        /* BOTTOM CARD: pick button and question */
+        #bottom{pointer-events:none;
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:calc(12px + env(safe-area-inset-bottom,0px));
+            display:flex;
+            justify-content:center;
+            padding:0 10px
+        }
+
+        #card{pointer-events:auto;
+            width:min(640px,100%);
+            background:var(--panel);
+            border:2px solid var(--line);
+            border-radius:16px;
+            padding:14px 16px
+        }
+
+        #who{font-size:18px;
+            margin-bottom:4px
+        }
+
+        #q{font-size:23px;
+            line-height:1.25;
+            margin-bottom:10px
+        }
+
+        #opts{display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:8px
+        }
+
+        @media (max-width:520px){
+            #opts{grid-template-columns:1fr
+            }
+        }
+
+        /* BUTTONS */
+        button{font:inherit;
+            font-size:20px;
+            color:var(--ink);
+            background:var(--paper);
+            border:2px solid var(--ink);
+            border-radius:10px;
+            padding:9px 12px;
+            text-align:left;
+            cursor:pointer
+        }
+
+        button:hover:not(:disabled){background:var(--accent);
+            color:#1d2633
+        }
+
+        button:focus-visible{outline:3px solid var(--accent);
+            outline-offset:2px
+        }
+
+        button:disabled{cursor:default
+        }
+
+        button.good{background:var(--good);
+            color:#fff;
+            border-color:var(--good)
+        }
+
+        button.bad{background:var(--bad);
+            color:#fff;
+            border-color:var(--bad)
+        }
+
+        .main{background:var(--accent);
+            color:#1d2633;
+            border-color:#1d2633;
+            text-align:center;
+            width:100%;
+            font-size:24px
+        }
+
+        #fb{margin-top:10px;
+            font-size:20px
+        }
+
+        /* ANSWERS, HINT BUTTON AND TEACHER FACE VIEW */
+        #row{display:flex;
+            gap:10px;
+            align-items:flex-start
+        }
+
+        #opts{flex:1;
+            min-width:0
+        }
+
+        #face{flex:0 0 190px;
+            height:190px;
+            border:3px solid var(--ink);
+            border-radius:6px;
+            position:relative;
+            overflow:hidden;
+            background:#b9d6ee
+        }
+
+        #face canvas{position:absolute;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%
+        }
+
+        #face span{position:absolute;
+            left:6px;
+            bottom:3px;
+            font-size:16px;
+            color:#fff;
+            text-shadow:0 1px 3px #000
+        }
+
+        #bar{display:flex;
+            gap:8px;
+            align-items:center;
+            margin-bottom:8px;
+            flex-wrap:wrap
+        }
+
+        #hintBtn,#expBtn{font-size:18px;
+            padding:5px 12px
+        }
+
+        #hintBtn.on,#expBtn.on{background:var(--accent);
+            color:#1d2633
+        }
+
+        #hintBtn:disabled:not(.on){opacity:.5
+        }
+
+        #hintNote{font-size:17px;
+            flex:1;
+            min-width:180px
+        }
+
+        #boardCardNote{font-size:19px;
+            line-height:1.35;
+            background:var(--paper);
+            border:2px solid var(--line);
+            border-radius:10px;
+            padding:10px 12px;
+            margin-bottom:10px;
+            white-space:pre-line
+        }
+
+        @media (max-width:520px){
+            #face{flex-basis:120px;
+                height:120px
+            }
+        }
+
+        /* UTILITIES */
+        .hide{display:none!important
+        }
+
+        #nextBtn{margin-top:10px
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top bar: score and question counter -->
+    <div id="hud">
+        <div class="pill" id="score">Score 0</div>
+        <div class="pill" id="prog">Question 1 of 6</div>
+    </div>
+
+    <!-- Teacher speech bubble -->
+    <div id="bubble">Good morning, class! Ready for a chemistry pop quiz?</div>
+
+    <!-- Bottom card: pick button first, then the question and answers -->
+    <div id="bottom">
+        <div id="card">
+            <div id="pick">
+                <button class="main" id="pickBtn">Pick a random student</button>
+            </div>
+
+            <div id="ask" class="hide">
+                <div id="who"></div>
+                <div id="q"></div>
+                <div id="bar">
+                    <button id="hintBtn">Hint</button>
+                    <button id="expBtn" type="button">Show Explanation</button>
+                    <span id="hintNote"></span>
+                </div>
+                <div id="row">
+                    <div id="opts"></div>
+                    <div id="face">
+                        <canvas id="faceView"></canvas>
+                        <span>Mr. Hasan</span>
+                    </div>
+                </div>
+                <div id="boardCardNote" class="hide"></div>
+                <div id="fb" class="hide"></div>
+                <button class="main hide" id="nextBtn">Next question</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        // Pop Quiz: The Classroom Game (Three.js r128)
+        // Sections:
+        //   1. GAME DATA: Grade 12 LS chemistry trick questions, student seat config
+        //   2. SCENE SETUP: renderer, camera, lights
+        //   3. CLASSROOM: two-tone walls, right door, left windows, large teacher desk, notice boards
+        //   4. BOARD: canvas texture that shows the questions and explanations
+        //   5. TEACHER (Mr. Hasan): body, face, expressions
+        //   5b. TEACHER AVATAR (.glb file, optional)
+        //   6. STUDENTS: 3 rows x 5 tables, side-by-side pairs & solo seats, normal hair, faces
+        //   7. CAMERA: home view, full-class teacher POV, board & Mr. Hasan POV, look-at target, resizing
+        //   8. GAME STATE: questions, score, hints, board explanation POV
+        //   9. INTRO: teacher walks in through the right door
+        //   10. GAME FLOW: pick student, ask, explain on board, answer, next
+        //   11. ANIMATION LOOP: runs every frame
+        //   12. CAMERA DRAG/ZOOM CONTROLS AND START
+
+        // ============================================================
+        // 1. GAME DATA: Grade 12 LS chemistry trick questions, student seat config
+        // ============================================================
+        const QS=[
+            [
+                "H2O2 + 2I- + 2H+ -> I2 + 2H2O: Exp A uses 0.050 mol H2O2 + 0.20 mol I-; Exp B uses 0.050 mol H2O2 + 0.40 mol I-. What happens?",
+                ["Exp B makes double I2","Exp B reaches same n(I2) faster","Exp B stops earlier","Exp B makes less I2"],
+                1,
+                "H2O2 is limiting (0.050 mol) in both runs. Double I- increases rate (steeper initial slope), while final n(I2) stays 0.050 mol."
+            ],
+            [
+                "A product curve n(P) = f(t) starts at 2 mol (t = 0) and plateaus at n_max = 8 mol. What is n(P) at t_1/2?",
+                ["5 mol","4 mol","6 mol","2 mol"],
+                1,
+                "Product half-life uses n_max / 2 = 8 / 2 = 4 mol. (n0 + n_inf)/2 applies to an excess reactant, not a product curve."
+            ],
+            [
+                "Catalyst X gives a bigger rate boost than Y using 0.1 g vs 5.0 g. Which property is that, and does stoichiometry change?",
+                ["Selectivity; ratio changes","Activity; ratio stays same","Selectivity; ratio stays same","Activity; ratio changes"],
+                1,
+                "Higher rate per smaller catalyst mass = higher activity (selectivity favors specific products). Catalysts never change stoichiometry."
+            ],
+            [
+                "2.0 g Zn lump vs 2.0 g Zn powder with excess H3O+ at equal T: which has steeper initial slope, and why add cold water/ice?",
+                ["Powder steeper; cools & dilutes","Lump steeper; stops reaction","Powder steeper; adds H3O+","Lump steeper; raises T"],
+                0,
+                "Zn powder has higher surface area -> steeper initial slope & earlier plateau, same final yield. Cold water/ice lowers T and dilutes reactants."
+            ],
+            [
+                "For A(g) + B(g) <=> 2C(g) at equilibrium in a closed flask at constant T, is this true or false: [A] = [B] = [C] and motion stops?",
+                ["True; rates & [ ] equal","False; forward = reverse rate","True; motion stops","False; K becomes 1"],
+                1,
+                "False! At dynamic equilibrium, r_forward = r_reverse and concentrations stay constant (not necessarily equal), while molecules keep reacting."
+            ],
+            [
+                "For N2(g) + 3H2(g) <=> 2NH3(g) (delta H < 0), what happens to K when lowering T vs adding a catalyst?",
+                ["Both increase K","Lowering T increases K; catalyst: no change","Catalyst increases K; T: no change","Both lower K"],
+                1,
+                "Exothermic (delta H < 0): lowering T favors forward reaction -> K increases. A catalyst speeds both directions equally -> K unchanged."
+            ]
+        ];
+
+        const HAIR_BLACK=0x181818;
+        const HAIR_DARK_BROWN=0x2b1d14;
+        const HAIR_BROWN=0x5a3825;
+        const HAIR_CHESTNUT=0x7c5335;
+        const HAIR_BLONDE=0xd8b45c;
+
+        // 3 rows of 5 tables.
+        // Slot "solo" sits in the middle of the table; "left" and "right" sit side-by-side on the same desk.
+        const SEAT_PLAN=[
+            // Row 0 (next to left window)
+            {row:0,table:0,slot:"solo",name:"Ghazal",hair:"curlyDown",hairCol:HAIR_BLONDE,shirt:0xe76f51,skin:0xf3cfa9},
+            {row:0,table:1,slot:"left",name:"Aya",hair:"longSmooth",hairCol:HAIR_CHESTNUT,shirt:0x2a9d8f,skin:0xf1c9a5},
+            {row:0,table:1,slot:"right",name:"Majida",hair:"longSmooth",hairCol:HAIR_BLACK,shirt:0x6a8caf,skin:0xe8b998},
+            {row:0,table:2,slot:"left",name:"Ali",hair:"guy",hairCol:HAIR_BROWN,shirt:0xe9c46a,skin:0xd9a77f},
+            {row:0,table:2,slot:"right",name:"Ahmad",hair:"guy",hairCol:HAIR_BLACK,shirt:0x577590,skin:0xf1c9a5},
+            {row:0,table:3,slot:"left",name:"Fatima M.",hair:"longSmooth",hairCol:HAIR_DARK_BROWN,shirt:0x3b6e8c,skin:0xe8b998},
+            {row:0,table:3,slot:"right",name:"Habib",hair:"buzz",hairCol:HAIR_DARK_BROWN,shirt:0x8ab17d,skin:0xd9a77f},
+            {row:0,table:4,slot:"solo",name:"Batoul",hair:"medSmooth",hairCol:HAIR_BROWN,shirt:0xb56576,skin:0xf1c9a5},
+
+            // Middle row
+            {row:1,table:0,slot:"left",name:"Asmaa",hair:"longSmooth",hairCol:HAIR_BLACK,shirt:0x26292e,skin:0xe8b998},
+            {row:1,table:0,slot:"right",name:"Nour",hair:"medSmooth",hairCol:HAIR_CHESTNUT,shirt:0x4d908e,skin:0xf1c9a5},
+            // table 1 empty
+            {row:1,table:2,slot:"solo",name:"Leen",hair:"longSmooth",hairCol:HAIR_BROWN,shirt:0xc97b84,skin:0xf3cfa9},
+            {row:1,table:3,slot:"solo",name:"Mohammed",hair:"guy",hairCol:HAIR_BLACK,shirt:0x4ea8de,skin:0xd9a77f},
+            // table 4 empty
+
+            // Row 2 (next to right door)
+            {row:2,table:0,slot:"left",name:"Malaak",hair:"medSmooth",hairCol:HAIR_BLACK,shirt:0x9b5de5,skin:0xe8b998},
+            {row:2,table:0,slot:"right",name:"Fatima",hair:"longSmooth",hairCol:HAIR_BLACK,shirt:0xe09f3e,skin:0xf1c9a5},
+            {row:2,table:1,slot:"left",name:"Reine",hair:"medSmooth",hairCol:HAIR_CHESTNUT,shirt:0x8ac926,skin:0xf3cfa9},
+            {row:2,table:1,slot:"right",name:"Aya",hair:"longSmooth",hairCol:HAIR_DARK_BROWN,shirt:0x7b6d8d,skin:0xf1c9a5},
+            {row:2,table:2,slot:"left",name:"Dana",hair:"medSmooth",hairCol:HAIR_BROWN,shirt:0xd97757,skin:0xe8b998},
+            {row:2,table:2,slot:"right",name:"Fatima S.",hair:"longSmooth",hairCol:HAIR_DARK_BROWN,shirt:0x3d9970,skin:0xf1c9a5}
+            // tables 3 & 4 empty
+        ];
+
+        const $=id=>document.getElementById(id);
+
+        // ============================================================
+        // 2. SCENE SETUP: renderer, camera, lights
+        // ============================================================
+        const renderer=new THREE.WebGLRenderer({antialias:true});
+        renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+        renderer.shadowMap.enabled=true;
+        renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+        document.body.prepend(renderer.domElement);
+        const scene=new THREE.Scene();
+        scene.background=new THREE.Color(0xb9d6ee);
+        const cam=new THREE.PerspectiveCamera(58,1,.1,60);
+        const hemi=new THREE.HemisphereLight(0xf6f9ff,0x8b867b,.78);
+        scene.add(hemi);
+        const faceLight=new THREE.PointLight(0xfff4e0,.25,5);
+        scene.add(faceLight);
+        const sun=new THREE.DirectionalLight(0xfff7e6,.95);
+        sun.position.set(-14,7.2,2.5);
+        sun.castShadow=true;
+        scene.add(sun);
+        sun.shadow.mapSize.set(2048,2048);
+        Object.assign(sun.shadow.camera,{
+            left:-12,right:12,top:12,bottom:-12,near:.5,far:35
+        });
+        sun.shadow.bias=-.0005;
+
+        // ============================================================
+        // 3. CLASSROOM: two-tone walls, right door, left windows, large teacher desk, notice boards
+        // ============================================================
+        const mat=(c)=>new THREE.MeshLambertMaterial({color:c});
+
+        function box(w,h,d,c,x,y,z,p){
+            const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));
+            m.position.set(x,y,z);
+            m.castShadow=m.receiveShadow=true;
+            (p||scene).add(m);
+            return m;
+        }
+
+        const WALL_TOP=0xf3f2ed;
+        const WALL_LOW=0x7f888c;
+        const TRIM_COL=0x6b7378;
+
+        // Classroom floor
+        box(16,.2,16,0xd6cbb8,0,-.1,0);
+
+        // Back wall (two-tone)
+        box(16,2.6,.2,WALL_LOW,0,1.3,-7.5);
+        box(16,3.4,.2,WALL_TOP,0,4.3,-7.5);
+        box(16,.06,.22,TRIM_COL,0,2.6,-7.48);
+
+        // Left wall (x = -8): two-tone wall with two large windows + upper transoms
+        const leftSegments=[
+            [-7.5,-3.7],
+            [-0.7,1.1],
+            [4.1,8.0]
+        ];
+        leftSegments.forEach(([z0,z1])=>{
+            const len=z1-z0;
+            const zc=(z0+z1)/2;
+            box(.2,2.6,len,WALL_LOW,-8,1.3,zc);
+            box(.2,3.4,len,WALL_TOP,-8,4.3,zc);
+            box(.2,.06,len,TRIM_COL,-7.98,2.6,zc);
+        });
+
+        [-2.2,2.6].forEach(wz=>{
+            box(.2,1.8,3.0,WALL_LOW,-8,.9,wz);
+            box(.32,.08,3.12,0xe8eaed,-7.94,1.82,wz);
+            box(.22,.14,3.0,WALL_TOP,-8,4.16,wz);
+            box(.2,.5,3.0,WALL_TOP,-8,5.75,wz);
+
+            const frameCol=0xf4f6f8;
+            box(.14,.08,3.0,frameCol,-8,1.88,wz);
+            box(.14,.08,3.0,frameCol,-8,4.06,wz);
+            box(.14,2.24,.08,frameCol,-8,2.97,wz-1.46);
+            box(.14,2.24,.08,frameCol,-8,2.97,wz+1.46);
+            box(.12,2.24,.07,frameCol,-8,2.97,wz);
+            box(.14,.07,3.0,frameCol,-8,4.25,wz);
+            box(.14,.07,3.0,frameCol,-8,5.46,wz);
+            box(.14,1.25,.08,frameCol,-8,4.85,wz-1.46);
+            box(.14,1.25,.08,frameCol,-8,4.85,wz+1.46);
+
+            const glassMat=new THREE.MeshBasicMaterial({
+                color:0xdaf0ff,
+                transparent:true,
+                opacity:.24,
+                depthWrite:false
+            });
+            const g1=new THREE.Mesh(new THREE.PlaneGeometry(2.86,2.1),glassMat);
+            g1.rotation.y=Math.PI/2;
+            g1.position.set(-7.98,2.97,wz);
+            scene.add(g1);
+            const g2=new THREE.Mesh(new THREE.PlaneGeometry(2.86,1.15),glassMat);
+            g2.rotation.y=Math.PI/2;
+            g2.position.set(-7.98,4.85,wz);
+            scene.add(g2);
+
+            const blindZ=wz+1.15;
+            box(.08,.07,.62,0xdce0e5,-7.86,4.02,blindZ);
+            for(let s=0;s<14;s++){
+                box(.06,.025,.58,0xeef1f5,-7.86,3.92-s*.12,blindZ);
+            }
+        });
+
+        // Distant hillside & sunlit house outside the left windows
+        const hill=new THREE.Mesh(
+            new THREE.BoxGeometry(1,9,36),
+            new THREE.MeshBasicMaterial({color:0x8fa87e})
+        );
+        hill.position.set(-24,2.2,0);
+        scene.add(hill);
+        const hillTop=new THREE.Mesh(
+            new THREE.BoxGeometry(1,5,24),
+            new THREE.MeshBasicMaterial({color:0x7d976c})
+        );
+        hillTop.position.set(-23.4,5.2,-2);
+        scene.add(hillTop);
+        const distantHouse=new THREE.Mesh(
+            new THREE.BoxGeometry(1.5,1.4,2.4),
+            new THREE.MeshBasicMaterial({color:0xf4efe6})
+        );
+        distantHouse.position.set(-22.8,6.8,-1.8);
+        scene.add(distantHouse);
+        const distantRoof=new THREE.Mesh(
+            new THREE.BoxGeometry(1.6,.35,2.6),
+            new THREE.MeshBasicMaterial({color:0xc96b4b})
+        );
+        distantRoof.position.set(-22.8,7.65,-1.8);
+        scene.add(distantRoof);
+
+        // Right wall (x = 8) with doorway and hallway behind it
+        box(.2,2.6,2.5,WALL_LOW,8,1.3,-6.75);
+        box(.2,3.4,2.5,WALL_TOP,8,4.3,-6.75);
+        box(.2,.06,2.52,TRIM_COL,7.98,2.6,-6.75);
+
+        box(.2,2.6,11.7,WALL_LOW,8,1.3,2.15);
+        box(.2,3.4,11.7,WALL_TOP,8,4.3,2.15);
+        box(.2,.06,11.72,TRIM_COL,7.98,2.6,2.15);
+
+        box(.2,1.8,1.8,WALL_TOP,8,5.1,-4.6);
+
+        [-5.55,-3.65].forEach(z=>{
+            box(.3,4.2,.12,0xd8dadf,8,2.1,z);
+        });
+        box(.3,.12,1.9,0xd8dadf,8,4.2,-4.6);
+        const door=new THREE.Group();
+        door.position.set(7.95,0,-3.75);
+        scene.add(door);
+        box(.08,4.1,1.7,0xa3774c,0,2.05,-.85,door);
+        box(.12,.1,.1,0xcfd4dc,-.06,1.6,-1.5,door);
+        box(3,.2,2.6,0x8a8780,9.5,-.1,-4.6);
+        box(3,.2,2.6,0xd8d2c0,9.5,5.9,-4.6);
+        box(.2,6,2.6,0x3a3540,11,3,-4.6);
+        box(3,6,.2,0x4a4550,9.5,3,-5.9);
+        box(3,6,.2,0x4a4550,9.5,3,-3.3);
+
+        // Large teacher's desk on the front-left side with ample clearance from Row 0 desks
+        const tDesk=new THREE.Group();
+        tDesk.position.set(-5.6,0,-6.05);
+        scene.add(tDesk);
+        box(3.6,.12,1.5,0xc4945e,0,1.0,0,tDesk);
+        box(3.4,.48,.07,0xad7f4b,0,.74,-.68,tDesk);
+        box(3.4,.48,.07,0xad7f4b,0,.74,.68,tDesk);
+        box(.07,.48,1.36,0xad7f4b,-1.68,.74,0,tDesk);
+        box(.07,.48,1.36,0xad7f4b,1.68,.74,0,tDesk);
+        [
+            [-1.65,-.66],
+            [1.65,-.66],
+            [-1.65,.66],
+            [1.65,.66]
+        ].forEach(([lx,lz])=>{
+            box(.1,1.0,.1,0x2a2d32,lx,.5,lz,tDesk);
+        });
+        box(.54,.035,.4,0xf8f9fb,-.85,1.08,.12,tDesk);
+        box(.6,.035,.44,0x335c9e,.45,1.08,-.1,tDesk);
+        box(.28,.025,.34,0xf2c14e,1.25,1.075,.28,tDesk);
+        box(.11,.14,.11,0x5a3825,1.42,1.13,-.36,tDesk);
+
+        // Green notice board near the door where Fatima sits (right wall, z = -1.6) with a few pinned papers
+        const greenBoard=new THREE.Group();
+        greenBoard.position.set(7.88,2.55,-1.6);
+        scene.add(greenBoard);
+        box(.08,1.55,2.3,0x8a6238,0,0,0,greenBoard);
+        box(.05,1.38,2.14,0x2b6e44,-.02,0,0,greenBoard);
+        [
+            [-.055,.32,-.58,.08,0xfaf8f2,0xd9483b],
+            [-.055,.26,.12,-.06,0xfff6cc,0x2b6e9e],
+            [-.055,-.24,-.42,-.04,0xfaf8f2,0xd9483b],
+            [-.055,-.28,.48,.07,0xeaf4ff,0xd9822b]
+        ].forEach(([px,py,pz,rz,paperCol,pinCol])=>{
+            const pg=box(.012,.42,.34,paperCol,px,py,pz,greenBoard);
+            pg.rotation.x=rz;
+            box(.025,.03,.03,pinCol,px-.012,py+.14,pz,greenBoard);
+        });
+
+        // Empty board at the back of the room (back wall, right side)
+        const emptyBoard=new THREE.Group();
+        emptyBoard.position.set(4.5,2.85,-7.38);
+        scene.add(emptyBoard);
+        box(3.4,1.75,.08,0x8a6238,0,0,0,emptyBoard);
+        box(3.22,1.58,.05,0x355872,0,0,.02,emptyBoard);
+        box(3.3,.06,.12,0xd8dde3,0,-.82,.04,emptyBoard);
+
+        // Ceiling and recessed fluorescent light panels
+        const ceiling=box(.2,16,16,0xf4f4f0,0,6.1,0);
+        ceiling.rotation.z=Math.PI/2;
+        ceiling.castShadow=false;
+        for(let i=0;i<3;i++){
+            const l=new THREE.Mesh(
+                new THREE.BoxGeometry(2.6,.06,.7),
+                new THREE.MeshBasicMaterial({color:0xffffff})
+            );
+            l.position.set(0,5.96,-3.5+i*4.2);
+            scene.add(l);
+        }
+
+        // Wall clock above the board
+        const wc=new THREE.Mesh(
+            new THREE.CylinderGeometry(.42,.42,.06,24),
+            mat(0xffffff)
+        );
+        wc.rotation.x=Math.PI/2;
+        wc.position.set(-1.5,5.2,-7.35);
+        scene.add(wc);
+        box(.04,.28,.03,0x222222,-1.5,5.34,-7.3);
+        box(.03,.36,.03,0x222222,-1.32,5.2,-7.3).rotation.z=Math.PI/2;
+
+        // Purple backpack resting on the floor
+        const bag=box(.52,.36,.68,0x7d2e68,-2.8,.18,2.4);
+        bag.rotation.y=.35;
+        box(.38,.12,.45,0x662254,-2.8,.38,2.42).rotation.y=.35;
+
+        // ============================================================
+        // 4. BOARD: blue whiteboard with white aluminum frame
+        // ============================================================
+        const cv=document.createElement("canvas");
+        cv.width=1024;
+        cv.height=512;
+        const tex=new THREE.CanvasTexture(cv);
+        const board=new THREE.Mesh(
+            new THREE.PlaneGeometry(7.2,3.5),
+            new THREE.MeshBasicMaterial({map:tex})
+        );
+        board.position.set(-1.5,3.25,-7.36);
+        scene.add(board);
+        box(7.44,.12,.14,0xf5f7fa,-1.5,5.02,-7.34);
+        box(7.44,.14,.22,0xf5f7fa,-1.5,1.46,-7.3);
+        box(.12,3.62,.14,0xf5f7fa,-5.16,3.24,-7.34);
+        box(.12,3.62,.14,0xf5f7fa,2.16,3.24,-7.34);
+
+        function wrap(g,t,x,y,w,lh){
+            let l="";
+            for(const wd of t.split(" ")){
+                const n=l+wd+" ";
+                if(g.measureText(n).width>w&&l){
+                    g.fillText(l,x,y);
+                    y+=lh;
+                    l=wd+" ";
+                }else{
+                    l=n;
+                }
+            }
+            g.fillText(l,x,y);
+            return y;
+        }
+
+        function drawBoard(title,body,bodySize=52){
+            const g=cv.getContext("2d");
+            g.fillStyle="#24488a";
+            g.fillRect(0,0,1024,512);
+            g.strokeStyle="#e9edf4";
+            g.lineWidth=14;
+            g.strokeRect(0,0,1024,512);
+            g.fillStyle="#f2c14e";
+            g.font="50px 'Patrick Hand',Comic Sans MS,sans-serif";
+            g.fillText(title,60,92);
+            g.fillStyle="#ffffff";
+            g.font=bodySize+"px 'Patrick Hand',Comic Sans MS,sans-serif";
+            if(body){
+                wrap(g,body,60,175,904,Math.round(bodySize*1.22));
+            }
+            tex.needsUpdate=true;
+        }
+
+        // ============================================================
+        // 5. TEACHER (Mr. Hasan): body, face, expressions
+        // ============================================================
+        const teacher=new THREE.Group();
+        teacher.position.set(-4.8,0,-4.4);
+        teacher.scale.set(1.1,1.45,1.1);
+        scene.add(teacher);
+        const torso=new THREE.Mesh(
+            new THREE.CylinderGeometry(.42,.5,1.3,20),
+            mat(0x3d405b)
+        );
+        torso.scale.z=.65;
+        torso.position.y=1.15;
+        torso.castShadow=true;
+        teacher.add(torso);
+        box(.1,.5,.05,0xc0463a,0,1.35,.3,teacher);
+        const mkLimb=(x,y,w,h,c)=>{
+            const g=new THREE.Group();
+            g.position.set(x,y,0);
+            teacher.add(g);
+            box(w,h,.3,c,0,-h/2,0,g);
+            return g;
+        };
+        const legL=mkLimb(-.22,.8,.35,.8,0x2b2d42);
+        const legR=mkLimb(.22,.8,.35,.8,0x2b2d42);
+        const tHead=new THREE.Mesh(
+            new THREE.SphereGeometry(.38,20,16),
+            mat(0xf1c9a5)
+        );
+        tHead.position.set(0,2.2,0);
+        teacher.add(tHead);
+        box(.8,.18,.7,0x4a3426,0,2.5,-.02,teacher);
+        const face={};
+        const sph=(r,c,x,y,z)=>{
+            const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),mat(c));
+            m.position.set(x,y,z);
+            tHead.add(m);
+            return m;
+        };
+        face.eyeL=sph(.065,0xffffff,-.13,.06,.32);
+        face.eyeR=sph(.065,0xffffff,.13,.06,.32);
+        face.pupL=sph(.032,0x111111,-.13,.06,.375);
+        face.pupR=sph(.032,0x111111,.13,.06,.375);
+        sph(.04,0xe2b08c,0,-.03,.365);
+        face.browL=box(.17,.035,.03,0x2b1d14,-.13,.17,.325,tHead);
+        face.browR=box(.17,.035,.03,0x2b1d14,.13,.17,.325,tHead);
+        face.mouth=new THREE.Mesh(
+            new THREE.TorusGeometry(.09,.018,8,16,Math.PI),
+            mat(0x7a2e2e)
+        );
+        face.mouth.position.set(0,-.14,.35);
+        tHead.add(face.mouth);
+        const EXP={
+            neutral:{
+                c:.15,by:0,bt:0,e:1
+            },happy:{
+                c:1,by:.025,bt:0,e:.85
+            },worried:{
+                c:-.8,by:.03,bt:.4,e:1.2
+            },stern:{
+                c:-.25,by:-.015,bt:-.35,e:.9
+            }
+        };
+        const ce={
+            c:.15,by:0,bt:0,e:1
+        };
+
+        function updFace(){
+            const T=EXP[mood];
+            for(const k in T)
+                ce[k]+=(T[k]-ce[k])*.15;
+            face.mouth.scale.y=Math.max(.06,Math.abs(ce.c));
+            face.mouth.rotation.z=ce.c>0?Math.PI:0;
+            face.mouth.position.y=-.14+.03*ce.c;
+            face.browL.position.y=face.browR.position.y=.17+ce.by;
+            face.browL.rotation.z=ce.bt;
+            face.browR.rotation.z=-ce.bt;
+            const bl=(clock.getElapsedTime()%3.7)<.12?.1:1;
+            face.eyeL.scale.y=face.eyeR.scale.y=ce.e*bl;
+            face.pupL.scale.y=face.pupR.scale.y=bl;
+        }
+
+        const armR=mkLimb(.58,1.72,.22,.95,0x3d405b);
+        const armL=mkLimb(-.58,1.72,.22,.95,0x3d405b);
+
+        // ============================================================
+        // 5b. TEACHER AVATAR (.glb): replaces the blocky teacher once loaded
+        // ============================================================
+        const AVATAR_FILES=["teacher.glb","model.glb","avatar/model.glb"];
+        const AVATAR_HEIGHT=3.6;
+        let avatar=null;
+        const AV={};
+        const EXPW={
+            neutral:{
+                mouthSmileLeft:.1,
+                mouthSmileRight:.1
+            },
+            happy:{
+                mouthSmileLeft:.9,
+                mouthSmileRight:.9,
+                cheekSquintLeft:.5,
+                cheekSquintRight:.5,
+                eyeSquintLeft:.3,
+                eyeSquintRight:.3,
+                browOuterUpLeft:.2,
+                browOuterUpRight:.2
+            },
+            worried:{
+                browInnerUp:.9,
+                mouthFrownLeft:.6,
+                mouthFrownRight:.6,
+                eyeWideLeft:.3,
+                eyeWideRight:.3,
+                mouthPressLeft:.2,
+                mouthPressRight:.2
+            },
+            stern:{
+                browDownLeft:.8,
+                browDownRight:.8,
+                mouthFrownLeft:.4,
+                mouthFrownRight:.4,
+                mouthPressLeft:.5,
+                mouthPressRight:.5,
+                eyeSquintLeft:.2,
+                eyeSquintRight:.2
+            }
+        };
+        const EXPNAMES=[...new Set(Object.values(EXPW).flatMap(o=>Object.keys(o)))];
+        const avW={};
+        EXPNAMES.forEach(n=>{
+            avW[n]=0;
+        });
+
+        function loadAvatar(i){
+            if(i>=AVATAR_FILES.length){
+                console.warn("No avatar file found, keeping the blocky teacher");
+                return;
+            }
+            new THREE.GLTFLoader().load(AVATAR_FILES[i],onAvatar,undefined,()=>{
+                loadAvatar(i+1);
+            });
+        }
+
+        function qm(b){
+            return !b||b===AV.model?new THREE.Quaternion():qm(b.parent).multiply(b.quaternion);
+        }
+
+        function setWorld(b,Q){
+            b.quaternion.copy(qm(b.parent).invert().multiply(Q));
+        }
+
+        function aim(name,wanted){
+            const q=new THREE.Quaternion().setFromUnitVectors(AV.restDir[name],wanted);
+            setWorld(AV[name],q.multiply(AV.restQ[name]));
+        }
+
+        function onAvatar(gltf){
+            const model=gltf.scene;
+            AV.model=model;
+            model.updateMatrixWorld(true);
+            const names=["Hips","Neck","Head","HeadTop_End","LeftUpLeg","LeftLeg","LeftFoot","RightUpLeg","RightLeg","RightFoot","LeftArm","LeftForeArm","LeftHand","RightArm","RightForeArm","RightHand"];
+            names.forEach(n=>{
+                AV[n]=model.getObjectByName(n);
+            });
+            if(names.some(n=>!AV[n])){
+                console.warn("Avatar is missing bones, keeping the blocky teacher");
+                return;
+            }
+            AV.restQ={};
+            names.forEach(n=>{
+                AV.restQ[n]=qm(AV[n]);
+            });
+            const wp=n=>AV[n].getWorldPosition(new THREE.Vector3());
+            const dir=(a,b)=>wp(b).sub(wp(a)).normalize();
+            AV.restDir={
+                LeftUpLeg:dir("LeftUpLeg","LeftLeg"),
+                LeftLeg:dir("LeftLeg","LeftFoot"),
+                RightUpLeg:dir("RightUpLeg","RightLeg"),
+                RightLeg:dir("RightLeg","RightFoot"),
+                LeftArm:dir("LeftArm","LeftForeArm"),
+                LeftForeArm:dir("LeftForeArm","LeftHand"),
+                RightArm:dir("RightArm","RightForeArm"),
+                RightForeArm:dir("RightForeArm","RightHand")
+            };
+            model.scale.setScalar(AVATAR_HEIGHT/wp("HeadTop_End").y);
+            AV.morphs=[];
+            model.traverse(o=>{
+                if(!o.isMesh)return;
+                o.castShadow=true;
+                o.frustumCulled=false;
+                if(o.morphTargetDictionary)AV.morphs.push(o);
+                const mats=Array.isArray(o.material)?o.material:[o.material];
+                mats.forEach(m=>{
+                    ["map","emissiveMap"].forEach(k=>{
+                        if(m[k])m[k].encoding=THREE.LinearEncoding;
+                    });
+                    if(m.metalness!==undefined)m.metalness=Math.min(m.metalness,.1);
+                    m.needsUpdate=true;
+                });
+            });
+            teacher.scale.set(1,1,1);
+            teacher.children.forEach(c=>{
+                c.visible=false;
+            });
+            teacher.add(model);
+            avatar=model;
+        }
+
+        function updAvatar(t){
+            if(!avatar)return;
+            const V=THREE.Vector3;
+            const E=THREE.Euler;
+            const down=new V(0,-1,0);
+            [[legR,"Left",1],[legL,"Right",-1]].forEach(([blk,side,k])=>{
+                const s=blk.rotation.x;
+                aim(side+"UpLeg",down.clone().applyEuler(new E(s,0,k*.03)));
+                aim(side+"Leg",down.clone().applyEuler(new E(s+Math.max(0,-s)*1.2,0,k*.03)));
+            });
+            [[armR,"Left",1],[armL,"Right",-1]].forEach(([blk,side,k])=>{
+                const r=blk.rotation;
+                const armDir=down.clone().applyEuler(new E(r.x,0,r.z+k*.16));
+                aim(side+"Arm",armDir);
+                aim(side+"ForeArm",armDir.clone().add(new V(0,.15,.35)).normalize());
+            });
+            const yaw=tHead.rotation.y;
+            const up=new V(0,1,0);
+            setWorld(AV.Neck,new THREE.Quaternion().setFromAxisAngle(up,yaw*.4).multiply(AV.restQ.Neck));
+            setWorld(AV.Head,new THREE.Quaternion().setFromAxisAngle(up,yaw).multiply(AV.restQ.Head));
+            const tgt=EXPW[mood]||EXPW.neutral;
+            EXPNAMES.forEach(n=>{
+                avW[n]+=((tgt[n]||0)-avW[n])*.15;
+            });
+            const blink=(t%3.7)<.12?1:0;
+            const talk=state==="intro"&&IN.t>5.4&&IN.t<8.4?.1+.08*Math.sin(t*14):0;
+            AV.morphs.forEach(m=>{
+                const d=m.morphTargetDictionary;
+                const inf=m.morphTargetInfluences;
+                EXPNAMES.forEach(n=>{
+                    if(d[n]!==undefined)inf[d[n]]=avW[n];
+                });
+                ["eyeBlinkLeft","eyeBlinkRight"].forEach(n=>{
+                    if(d[n]!==undefined)inf[d[n]]=blink;
+                });
+                if(d.jawOpen!==undefined)inf[d.jawOpen]=talk;
+            });
+            const hp=AV.Head.getWorldPosition(new V());
+            const top=AV.HeadTop_End.getWorldPosition(new V());
+            const headCenter=hp.clone().lerp(top,.35);
+            const dist=Math.max(.72,(top.y-hp.y)*3.45);
+            faceCam.position.set(headCenter.x,headCenter.y,headCenter.z+dist);
+            faceLight.position.set(headCenter.x+.15,headCenter.y+.2,headCenter.z+1.0);
+            faceCam.lookAt(headCenter);
+        }
+
+        loadAvatar(0);
+
+        // ============================================================
+        // 6. STUDENTS: 3 rows x 5 tables, side-by-side pairs & solo seats, normal hair, faces
+        // ============================================================
+        const students=[];
+        const ringGeo=new THREE.TorusGeometry(.42,.042,8,32);
+        const ring=new THREE.Mesh(
+            ringGeo,
+            new THREE.MeshBasicMaterial({color:0xf2c14e})
+        );
+        ring.rotation.x=Math.PI/2;
+        ring.visible=false;
+        scene.add(ring);
+
+        function addHairOrHijab(g,style,color){
+            const hair=new THREE.Group();
+            g.add(hair);
+            const hm=mat(color);
+            const hy=1.78;
+            const hz=.05;
+            const put=(geo,x,y,z,rx,ry,rz,sx,sy,sz)=>{
+                const m=new THREE.Mesh(geo,hm);
+                m.position.set(x,y,z);
+                if(rx)m.rotation.x=rx;
+                if(ry)m.rotation.y=ry;
+                if(rz)m.rotation.z=rz;
+                if(sx||sy||sz)m.scale.set(sx||1,sy||1,sz||1);
+                m.castShadow=true;
+                hair.add(m);
+                return m;
+            };
+            const cap=(r,len)=>new THREE.SphereGeometry(r,20,14,0,Math.PI*2,0,Math.PI*len);
+            const ball=r=>new THREE.SphereGeometry(r,16,12);
+            const cyl=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,14);
+
+            if(style==="buzz"){
+                put(cap(.285,.42),0,hy,hz,.24);
+                return hair;
+            }
+
+            if(style==="guy"){
+                put(cap(.302,.52),0,hy+.01,hz,.26);
+                put(cyl(.29,.27,.16),0,hy+.13,hz-.01,-.15,0,0,1,.75,1.02);
+                put(cyl(.05,.04,.22),-.27,hy-.02,hz+.02,0,0,.08);
+                put(cyl(.05,.04,.22),.27,hy-.02,hz+.02,0,0,-.08);
+                return hair;
+            }
+
+            if(style==="shortHair"){
+                put(cap(.302,.52),0,hy+.01,hz,.25);
+                put(cyl(.25,.23,.24),0,hy-.08,hz+.12,.1,0,0,1.05,1,.65);
+                return hair;
+            }
+
+            // Smooth rounded hair cap + slender tapered locks
+            put(cap(.315,.54),0,hy,hz,.3);
+            if(style==="longSmooth"){
+                put(cyl(.26,.22,.76),0,hy-.34,hz+.16,.14,0,0,1.1,1,.65);
+                [-.25,.25].forEach((lx,idx)=>{
+                    put(cyl(.055,.032,.78),lx,hy-.36,hz+.03,.04,0,idx===0?.05:-.05);
+                });
+            }else if(style==="medSmooth"){
+                put(cyl(.25,.22,.44),0,hy-.2,hz+.15,.12,0,0,1.08,1,.62);
+                [-.25,.25].forEach((lx,idx)=>{
+                    put(cyl(.05,.03,.46),lx,hy-.21,hz+.03,.03,0,idx===0?.05:-.05);
+                });
+            }else if(style==="curlyDown"){
+                put(cyl(.25,.2,.72),0,hy-.32,hz+.15,.14,0,0,1.05,1,.6);
+                const ringCount=16;
+                for(let k=0;k<ringCount;k++){
+                    const a=(k/ringCount)*Math.PI*2;
+                    const yPos=k<6?hy+.11:hy-.12-((k-6)%5)*.13;
+                    const rad=k<6?.25:.27;
+                    put(ball(.072),Math.sin(a)*rad,yPos,hz+Math.cos(a)*rad);
+                }
+            }
+            return hair;
+        }
+
+        // Simple stylized face (eyes + mouth) on the front (-z) of a student's head
+        function addStudentFace(head){
+            const sFace=new THREE.Group();
+            head.add(sFace);
+            const eyeWhite=new THREE.MeshBasicMaterial({color:0xffffff});
+            const pupilMat=new THREE.MeshBasicMaterial({color:0x16191d});
+            const mouthMat=new THREE.MeshBasicMaterial({color:0x5e2a2a});
+
+            [-.085,.085].forEach(ex=>{
+                const ew=new THREE.Mesh(new THREE.SphereGeometry(.04,10,8),eyeWhite);
+                ew.position.set(ex,.04,-.255);
+                sFace.add(ew);
+                const pu=new THREE.Mesh(new THREE.SphereGeometry(.021,8,8),pupilMat);
+                pu.position.set(ex,.04,-.285);
+                sFace.add(pu);
+            });
+            const mouth=new THREE.Mesh(new THREE.BoxGeometry(.08,.02,.02),mouthMat);
+            mouth.position.set(0,-.08,-.275);
+            sFace.add(mouth);
+            return sFace;
+        }
+
+        // Double desk + bench facing toward the front (-z)
+        function buildTableUnit(parent,x,z){
+            const tg=new THREE.Group();
+            tg.position.set(x,0,z);
+            parent.add(tg);
+
+            const wood=0xc89a64;
+            const woodDark=0xb68650;
+            const metal=0x1e2024;
+            const w=2.25;
+
+            const top=box(w,.07,.76,wood,0,.98,-.54,tg);
+            top.rotation.x=.06;
+            box(w-.12,.24,.05,woodDark,0,.78,-.82,tg);
+
+            box(w,.06,.46,wood,0,.56,.08,tg);
+            const back=box(w,.2,.05,woodDark,0,.93,.34,tg);
+            back.rotation.x=-.12;
+
+            [-1.02,0,1.02].forEach(sx=>{
+                box(.045,.96,.045,metal,sx,.48,-.8,tg);
+                box(.045,.54,.045,metal,sx,.27,-.3,tg);
+                box(.045,.96,.045,metal,sx,.48,.32,tg);
+                box(.045,.045,1.16,metal,sx,.022,-.24,tg);
+                box(.045,.045,.64,metal,sx,.54,.02,tg);
+            });
+            return tg;
+        }
+
+        // Extra space between teacher's desk (back edge ~ -5.3) and front student desks (top edge ~ -2.84)
+        const ROW_X=[-5.4,-1.2,3.0];
+        const TABLE_Z=[-2.3,-0.6,1.1,2.8,4.5];
+
+        for(let r=0;r<3;r++){
+            for(let tb=0;tb<5;tb++){
+                buildTableUnit(scene,ROW_X[r],TABLE_Z[tb]);
+            }
+        }
+
+        SEAT_PLAN.forEach((cfg)=>{
+            const tx=ROW_X[cfg.row];
+            const tz=TABLE_Z[cfg.table];
+            const offsetX=cfg.slot==="left"?-.52:(cfg.slot==="right"?.52:0);
+
+            const g=new THREE.Group();
+            g.position.set(tx+offsetX,0,tz+.06);
+            scene.add(g);
+
+            const body=new THREE.Mesh(
+                new THREE.CylinderGeometry(.26,.32,.84,16),
+                mat(cfg.shirt)
+            );
+            body.position.set(0,1.1,.05);
+            body.castShadow=true;
+            g.add(body);
+
+            [-.33,.33].forEach(ax=>{
+                const a=new THREE.Mesh(
+                    new THREE.CylinderGeometry(.06,.06,.58,10),
+                    mat(cfg.shirt)
+                );
+                a.rotation.x=-1.9;
+                a.position.set(ax,1.25,-.22);
+                a.castShadow=true;
+                g.add(a);
+            });
+
+            [-.15,.15].forEach(lx=>{
+                const th=new THREE.Mesh(
+                    new THREE.CylinderGeometry(.08,.08,.58,10),
+                    mat(0x34495e)
+                );
+                th.rotation.x=Math.PI/2;
+                th.position.set(lx,.7,-.15);
+                g.add(th);
+                const sh=new THREE.Mesh(
+                    new THREE.CylinderGeometry(.07,.07,.48,10),
+                    mat(0x34495e)
+                );
+                sh.position.set(lx,.3,-.44);
+                g.add(sh);
+            });
+
+            const head=new THREE.Mesh(
+                new THREE.SphereGeometry(.27,20,16),
+                mat(cfg.skin)
+            );
+            head.position.set(0,1.78,.05);
+            head.castShadow=true;
+            g.add(head);
+
+            const sFace=addStudentFace(head);
+            const hair=addHairOrHijab(g,cfg.hair,cfg.hairCol);
+
+            students.push({
+                name:cfg.name,g,head,sFace,hair,body,base:0
+            });
+        });
+
+        // ============================================================
+        // 7. CAMERA: home view, full-class teacher POV, board & Mr. Hasan POV, look-at target, resizing
+        // ============================================================
+        const home={
+            pos:new THREE.Vector3(0.8,5.6,10.2),
+            look:new THREE.Vector3(-0.4,1.6,-1.8)
+        };
+        const teacherPOV={
+            pos:new THREE.Vector3(-2.6,4.9,-5.2),
+            look:new THREE.Vector3(-0.8,1.3,1.8)
+        };
+        const boardHasanPOV={
+            pos:new THREE.Vector3(-2.4,3.15,-1.5),
+            look:new THREE.Vector3(-2.4,2.85,-7.2)
+        };
+        const camTarget={pos:home.pos.clone(),look:home.look.clone()};
+        const look=home.look.clone();
+        cam.position.copy(home.pos);
+        const faceCam=new THREE.PerspectiveCamera(34,1,.1,30);
+        faceCam.position.set(-4.8,3.25,-2.15);
+        faceCam.lookAt(-4.8,3.22,-4.4);
+
+        function resize(){
+            const w=innerWidth;
+            const h=innerHeight;
+            renderer.setSize(w,h);
+            cam.aspect=w/h;
+            cam.updateProjectionMatrix();
+        }
+
+        addEventListener("resize",resize);
+        resize();
+
+        // ============================================================
+        // 8. GAME STATE: questions, score, hints, board explanation POV
+        // ============================================================
+        let order=[];
+        let qi=0;
+        let score=0;
+        let cur=null;
+        let state="idle";
+        let shake=0;
+        let bounce=0;
+        let hints=3;
+        let hintOn=false;
+        let expOn=false;
+        let prev=-1;
+        let hintMap=[];
+        let mood="neutral";
+
+        // ============================================================
+        // 9. INTRO: teacher walks in through the right door
+        // ============================================================
+        const WP=[[9,-4.6],[6.4,-4.6],[-4.8,-4.4]];
+        const SPD=1.6;
+        const WL=WP.slice(1).reduce(
+            (s,b,i)=>s+Math.hypot(b[0]-WP[i][0],b[1]-WP[i][1]),
+            0
+        );
+        const IN={t:0,last:0};
+        const sm=x=>{
+            x=Math.max(0,Math.min(1,x));
+            return x*x*(3-2*x);
+        };
+
+        function pathAt(d){
+            let s=0;
+            for(let i=0;i<WP.length-1;i++){
+                const a=WP[i];
+                const b=WP[i+1];
+                const L=Math.hypot(b[0]-a[0],b[1]-a[1]);
+                if(d<=s+L||i===WP.length-2){
+                    const u=Math.min(1,(d-s)/L);
+                    const dx=b[0]-a[0];
+                    const dz=b[1]-a[1];
+                    return {
+                        x:a[0]+dx*u,
+                        z:a[1]+dz*u,
+                        h:Math.atan2(dx,dz)
+                    };
+                }
+                s+=L;
+            }
+        }
+
+        function stepIntro(t){
+            const dt=Math.min(t-IN.last,.05);
+            IN.last=t;
+            IN.t+=dt;
+            const T=IN.t;
+            door.rotation.y=1.5*(
+                T<3
+                ?sm((T-.6)/1.2)
+                :1-sm((T-3)/.9)
+            );
+            const d=Math.max(0,Math.min(WL,(T-1.6)*SPD));
+            const p=pathAt(d);
+            const walking=T>1.6&&d<WL;
+            teacher.position.x=p.x;
+            teacher.position.z=p.z;
+            const th=d>=WL?0:p.h;
+            teacher.rotation.y+=(th-teacher.rotation.y)*.08;
+            const ph=d*3.4;
+            const sw=walking?Math.sin(ph):0;
+            legL.rotation.x=sw*.55;
+            legR.rotation.x=-sw*.55;
+            armR.rotation.x=-sw*.45;
+            armL.rotation.x=sw*.45;
+            teacher.position.y=walking?Math.abs(Math.sin(ph))*.05:0;
+            if(T>5.4&&T<8.4){
+                tHead.rotation.y=-.7+1.4*sm((T-5.4)/3);
+                armR.rotation.z=2.5+Math.sin(T*9)*.2;
+            }
+            mood=T>5.2?"happy":"neutral";
+            say(
+                T<1.6
+                ?"The class is chatting…"
+                :T<5.2
+                ?"Shh, everyone, here comes Mr. Hasan!"
+                :"Good morning, class! Let me see… everyone’s here."
+            );
+            if(T>8.8){
+                endIntro();
+            }
+        }
+
+        function endIntro(){
+            state="idle";
+            teacher.position.set(-4.8,0,-4.4);
+            teacher.rotation.y=0;
+            door.rotation.y=0;
+            legL.rotation.x=legR.rotation.x=0;
+            mood="neutral";
+            camTarget.pos.copy(home.pos);
+            camTarget.look.copy(home.look);
+            $("pickBtn").textContent="Pick a random student";
+            say("Ready for a chemistry pop quiz? Pick a student! (Drag to look around, scroll to zoom.)");
+        }
+
+        function preview(i){
+            prev=i;
+            if(state!=="asking"){
+                return;
+            }
+            mood=(hintOn&&i>=0)?hintMap[i]:"neutral";
+        }
+
+        function setHint(){
+            const b=$("hintBtn");
+            b.disabled=hintOn||hints<=0||state!=="asking";
+            b.classList.toggle("on",hintOn);
+            b.textContent=hintOn?"Hint on":"Hint ("+hints+" left)";
+            if(expOn){
+                $("hintNote").textContent="Mr. Hasan & board explanation view.";
+            }else{
+                $("hintNote").textContent=hintOn?"Hover over an answer and watch his face. On touch: tap to preview, tap again to answer.":"";
+            }
+        }
+
+        $("hintBtn").onclick=()=>{
+            if(state!=="asking"||hintOn||hints<=0){
+                return;
+            }
+            hints--;
+            hintOn=true;
+            if(prev>=0){
+                mood=hintMap[prev];
+            }
+            setHint();
+            say("Mr. Hasan gives you a look…");
+        };
+
+        function setExplanationView(active){
+            if(cur===null||state==="idle"||state==="intro"||state==="picking"){
+                return;
+            }
+            const [q,,,exp]=QS[order[qi]];
+            const s=students[cur];
+            expOn=active;
+            $("expBtn").classList.toggle("on",expOn);
+            $("expBtn").textContent=expOn?"Back to Question":"Show Explanation";
+            if(expOn){
+                s.head.visible=true;
+                s.sFace.visible=true;
+                s.hair.visible=true;
+                ring.visible=false;
+                mood="happy";
+                camTarget.pos.copy(boardHasanPOV.pos);
+                camTarget.look.copy(boardHasanPOV.look);
+                drawBoard("Mr. Hasan's Explanation (Q"+(qi+1)+")",exp,44);
+                $("boardCardNote").textContent="Board Explanation: "+exp;
+                $("boardCardNote").classList.remove("hide");
+                say("Mr. Hasan writes the chemistry explanation on the board.");
+            }else{
+                mood=state==="answered"?(!$("opts").querySelector("button.bad")?"happy":"worried"):"neutral";
+                focus(cur);
+                drawBoard("Question "+(qi+1),q,52);
+                $("boardCardNote").classList.add("hide");
+                say(s.name+", please stand up and answer!");
+            }
+            setHint();
+        }
+
+        $("expBtn").onclick=()=>setExplanationView(!expOn);
+
+        const say=t=>$("bubble").textContent=t;
+
+        function newRound(){
+            order=[...QS.keys()].sort(()=>Math.random()-.5);
+            qi=0;
+            score=0;
+            hints=3;
+            updHud();
+        }
+
+        function updHud(){
+            $("score").textContent="Score "+score;
+            $("prog").textContent="Question "+Math.min(
+                qi+1,
+                QS.length
+            )+" of "+QS.length;
+        }
+
+        function highlight(i){
+            const s=students[i];
+            ring.visible=true;
+            ring.position.set(s.g.position.x,2.5,s.g.position.z);
+        }
+
+        function focus(i){
+            const s=students[i];
+            const p=s.g.position;
+            camTarget.pos.set(p.x,1.85,p.z+.55);
+            camTarget.look.set(p.x*.35,2.2,-7);
+            setTimeout(()=>{
+                if(expOn)return;
+                s.head.visible=false;
+                s.sFace.visible=false;
+                s.hair.visible=false;
+                s.body.visible=true;
+            },700);
+        }
+
+        function unfocus(){
+            students.forEach(s=>{
+                s.head.visible=true;
+                s.sFace.visible=true;
+                s.hair.visible=true;
+            });
+            camTarget.pos.copy(home.pos);
+            camTarget.look.copy(home.look);
+            ring.visible=false;
+            mood="neutral";
+        }
+
+        // ============================================================
+        // 10. GAME FLOW: pick student, ask, explain on board, answer, next
+        // ============================================================
+        $("pickBtn").onclick=()=>{
+            if(state==="intro"){
+                endIntro();
+                return;
+            }
+            if(state!=="idle"){
+                return;
+            }
+            if(qi>=QS.length){
+                newRound();
+            }
+            expOn=false;
+            $("expBtn").classList.remove("on");
+            $("expBtn").textContent="Show Explanation";
+            $("boardCardNote").classList.add("hide");
+            state="picking";
+            $("pick").classList.add("hide");
+            camTarget.pos.copy(teacherPOV.pos);
+            camTarget.look.copy(teacherPOV.look);
+            drawBoard("Chemistry Pop Quiz!","Who will Mr. Hasan call on?");
+            say("Hmm… let me see who’s ready across the whole class…");
+            const target=Math.floor(Math.random()*students.length);
+            let k=0;
+            let steps=18+Math.floor(Math.random()*6);
+            let idx=Math.floor(Math.random()*students.length);
+            const tick=()=>{
+                idx=(idx+1+Math.floor(Math.random()*3))%students.length;
+                if(k===steps){
+                    idx=target;
+                }
+                highlight(idx);
+                k++;
+                if(k<=steps){
+                    setTimeout(tick,60+k*k*1.2);
+                }else{
+                    cur=target;
+                    setTimeout(ask,700);
+                }
+            };
+            tick();
+        };
+
+        function ask(){
+            const [q,o,a]=QS[order[qi]];
+            const s=students[cur];
+            expOn=false;
+            $("expBtn").classList.remove("on");
+            $("expBtn").textContent="Show Explanation";
+            $("boardCardNote").classList.add("hide");
+            say(s.name+", please stand up and answer!");
+            focus(cur);
+            drawBoard("Question "+(qi+1),q,52);
+            $("who").textContent="You are "+s.name+". Mr. Hasan is looking at you.";
+            $("q").textContent=q;
+            const box=$("opts");
+            box.innerHTML="";
+            hintOn=false;
+            prev=-1;
+            mood="neutral";
+            hintMap=o.map(
+                (_,i)=>i===a
+                ?"happy"
+                :(Math.random()<.5?"worried":"stern")
+            );
+            o.forEach((t,i)=>{
+                const b=document.createElement("button");
+                b.textContent=String.fromCharCode(65+i)+". "+t;
+                b.onclick=()=>{
+                    if(hintOn&&state==="asking"&&prev!==i){
+                        preview(i);
+                        return;
+                    }
+                    answer(i,a);
+                };
+                b.onpointerenter=e=>{
+                    if(e.pointerType==="mouse"){
+                        preview(i);
+                    }
+                };
+                b.onpointerleave=e=>{
+                    if(e.pointerType==="mouse"){
+                        preview(-1);
+                    }
+                };
+                b.onfocus=()=>{
+                    if(b.matches(":focus-visible")){
+                        preview(i);
+                    }
+                };
+                b.onblur=()=>preview(-1);
+                box.appendChild(b);
+            });
+            $("fb").classList.add("hide");
+            $("nextBtn").classList.add("hide");
+            $("ask").classList.remove("hide");
+            state="asking";
+            setHint();
+        }
+
+        function answer(i,a){
+            if(state!=="asking"){
+                return;
+            }
+            state="answered";
+            const btns=[...$("opts").children];
+            btns.forEach((b,j)=>{
+                b.disabled=true;
+                if(j===a){
+                    b.classList.add("good");
+                }
+            });
+            const ok=i===a;
+            if(!ok){
+                btns[i].classList.add("bad");
+            }
+            mood=ok?"happy":"worried";
+            hintOn=false;
+            setHint();
+            const s=students[cur];
+            if(ok){
+                score++;
+                bounce=1;
+                say("Excellent, "+s.name+"! Everyone give a clap.");
+                $("fb").textContent="Correct! +1 point.";
+            }else{
+                shake=1;
+                say("Not quite, "+s.name+". Check the board for the chemistry trick.");
+                $("fb").textContent="The correct answer was "+String.fromCharCode(65+a)+". "+QS[order[qi]][1][a]+".";
+            }
+            $("fb").classList.remove("hide");
+            s.head.visible=true;
+            s.sFace.visible=true;
+            s.hair.visible=true;
+            const last=qi===QS.length-1;
+            $("nextBtn").textContent=last?"See final score":"Next question";
+            $("nextBtn").classList.remove("hide");
+            updHud();
+        }
+
+        $("nextBtn").onclick=()=>{
+            if(state!=="answered"){
+                return;
+            }
+            expOn=false;
+            $("expBtn").classList.remove("on");
+            $("expBtn").textContent="Show Explanation";
+            $("boardCardNote").classList.add("hide");
+            unfocus();
+            qi++;
+            $("ask").classList.add("hide");
+            if(qi>=QS.length){
+                const msg=score>=5?"Top of the chemistry class!":score>=3?"Good effort, class!":"Let’s review that tomorrow.";
+                drawBoard("Quiz over",score+" out of "+QS.length+". "+msg,52);
+                say(msg);
+                $("pickBtn").textContent="Play again";
+            }else{
+                updHud();
+                say("Let’s pick another student.");
+                drawBoard("Chemistry Pop Quiz!","Next question coming up…",52);
+                $("pickBtn").textContent="Pick a random student";
+            }
+            $("pick").classList.remove("hide");
+            state="idle";
+        };
+
+        // ============================================================
+        // 11. ANIMATION LOOP: runs every frame
+        // ============================================================
+        const clock=new THREE.Clock();
+
+        function frame(){
+            const t=clock.getElapsedTime();
+            const dt=Math.min(clock.getDelta(),.05);
+            tHead.rotation.y=Math.sin(t*.8)*.22;
+            updFace();
+            armR.rotation.x=armL.rotation.x=0;
+            armR.rotation.z=.08+Math.sin(t*1.4)*.03;
+            armL.rotation.z=-.08-Math.sin(t*1.4)*.03;
+            legL.rotation.x=legR.rotation.x=0;
+            teacher.position.y=Math.abs(Math.sin(t*1.6))*.03;
+            if(state==="intro"){
+                stepIntro(t);
+            }
+            const chat=state==="intro"&&IN.t<2.4;
+            students.forEach((s,i)=>{
+                s.g.position.y=Math.sin(t*1.3+i)*.012;
+                s.head.rotation.z=chat?Math.sin(t*5+i*2)*.22:Math.sin(t*.7+i*2)*.05;
+                s.body.rotation.z=chat?Math.sin(t*3+i)*.08*(
+                    i%2
+                    ?1
+                    :-1
+                ):0;
+            });
+            ring.rotation.z=t*2;
+            if(cur!==null&&state==="answered"){
+                const s=students[cur];
+                if(bounce>0){
+                    s.g.position.y=Math.abs(Math.sin((1-bounce)*Math.PI*3))*.35;
+                    bounce-=.012;
+                    if(bounce<=0){
+                        bounce=0;
+                    }
+                }
+                if(shake>0){
+                    s.g.rotation.y=Math.sin(shake*40)*.15*shake;
+                    shake-=.012;
+                    if(shake<=0){
+                        shake=0;
+                        s.g.rotation.y=0;
+                    }
+                }
+            }
+            if(state==="idle"){
+                const sp=new THREE.Spherical().setFromVector3(home.pos.clone().sub(home.look));
+                sp.theta+=orb.yaw;
+                sp.phi=Math.max(1.2,Math.min(1.5,sp.phi+orb.pitch));
+                sp.radius*=orb.zoom;
+                camTarget.pos.setFromSpherical(sp).add(home.look);
+                camTarget.pos.y=Math.min(5.6,camTarget.pos.y);
+                camTarget.pos.x=Math.max(-7.4,Math.min(7.4,camTarget.pos.x));
+            }
+            updAvatar(t);
+            cam.position.lerp(camTarget.pos,.05);
+            look.lerp(camTarget.look,.05);
+            cam.lookAt(look);
+            renderer.setScissorTest(false);
+            renderer.setViewport(0,0,innerWidth,innerHeight);
+            renderer.render(scene,cam);
+            const r=$("face").getBoundingClientRect();
+            if(r.width>20&&r.height>20){
+                const H=innerHeight;
+                faceCam.aspect=r.width/r.height;
+                faceCam.updateProjectionMatrix();
+                renderer.setScissorTest(true);
+                renderer.setViewport(r.left,H-r.bottom,r.width,r.height);
+                renderer.setScissor(r.left,H-r.bottom,r.width,r.height);
+                const keep=[hemi.intensity,sun.intensity,faceLight.intensity];
+                hemi.intensity=1.05;
+                sun.intensity=.85;
+                faceLight.intensity=.45;
+                renderer.render(scene,faceCam);
+                hemi.intensity=keep[0];
+                sun.intensity=keep[1];
+                faceLight.intensity=keep[2];
+                const pr=renderer.getPixelRatio();
+                const fv=$("faceView");
+                const fw=Math.round(r.width*pr);
+                const fh=Math.round(r.height*pr);
+                if(fv.width!==fw||fv.height!==fh){
+                    fv.width=fw;
+                    fv.height=fh;
+                }
+                fv.getContext("2d").drawImage(renderer.domElement,r.left*pr,r.top*pr,r.width*pr,r.height*pr,0,0,fw,fh);
+                renderer.setScissorTest(false);
+            }
+            requestAnimationFrame(frame);
+        }
+
+        try{
+            document.fonts.load("50px 'Patrick Hand'").then(()=>{
+                drawBoard("Chemistry Pop Quiz!","Press the button and let Mr. Hasan pick a student.");
+            });
+        }catch(e){
+        }
+
+        drawBoard(
+            "Chemistry Pop Quiz!",
+            "Press the button and let Mr. Hasan pick a student."
+        );
+
+        // ============================================================
+        // 12. CAMERA DRAG/ZOOM CONTROLS AND START
+        // ============================================================
+        const orb={
+            yaw:0,pitch:0,zoom:1
+        };
+        let dr=null;
+        const cvs=renderer.domElement;
+        cvs.addEventListener("pointerdown",e=>{
+            dr={x:e.clientX,y:e.clientY};
+            cvs.setPointerCapture(e.pointerId);
+        });
+        cvs.addEventListener("pointermove",e=>{
+            if(!dr){
+                return;
+            }
+            orb.yaw=Math.max(
+                -.55,
+                Math.min(.55,orb.yaw-(e.clientX-dr.x)*.005)
+            );
+            orb.pitch=Math.max(
+                -.3,
+                Math.min(.3,orb.pitch-(e.clientY-dr.y)*.004)
+            );
+            dr={x:e.clientX,y:e.clientY};
+        });
+        cvs.addEventListener("pointerup",()=>dr=null);
+        cvs.addEventListener("pointercancel",()=>dr=null);
+        cvs.addEventListener("wheel",e=>{
+            e.preventDefault();
+            orb.zoom=Math.max(
+                .5,
+                Math.min(1.2,orb.zoom*(1+e.deltaY*.001))
+            );
+        },{passive:false});
+        teacher.position.set(9,0,-4.6);
+        teacher.rotation.y=-Math.PI/2;
+        cam.position.set(1.2,4.8,8.2);
+        look.set(4.5,1.6,-4.6);
+        camTarget.pos.copy(cam.position);
+        camTarget.look.copy(look);
+        $("pickBtn").textContent="Skip intro";
+        say("The class is chatting…");
+        state="intro";
+        newRound();
+        frame();
+    </script>
+</body>
+</html>
